@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShareBox - Simple File & Note Sharing</title>
+  <!-- Google Fonts: Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
+</head>
+<body>
+
+  <!-- Background Ambient Glows -->
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+
+  <!-- Navigation / Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="logo">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="logo-icon"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+        <span>ShareBox</span>
+      </div>
+      <p class="subtitle">Quickly share files and notes with your friends</p>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-container">
+    <div class="grid-layout">
+      
+      <!-- Left Column: Upload Panel -->
+      <section class="upload-section glass-panel">
+        <h2 class="section-title">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="inline-icon"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          Share New File
+        </h2>
+        
+        <form id="uploadForm" class="upload-form" enctype="multipart/form-data">
+          <!-- Uploader Name -->
+          <div class="form-group">
+            <label for="uploaderInput">Your Name</label>
+            <div class="input-wrapper">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="input-icon"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              <input type="text" id="uploaderInput" name="uploader" placeholder="e.g. John Doe" required maxlength="50">
+            </div>
+          </div>
+
+          <!-- Note/Message -->
+          <div class="form-group">
+            <label for="noteInput">Attach a Note</label>
+            <div class="input-wrapper text-area-wrapper">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="input-icon textarea-icon"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              <textarea id="noteInput" name="note" placeholder="Write something about the file..." rows="4" maxlength="500"></textarea>
+            </div>
+          </div>
+
+          <!-- File Input Drag-and-Drop Area -->
+          <div class="form-group">
+            <label>Select File (PDF or DOCX, max 10MB)</label>
+            <div id="dropZone" class="drop-zone">
+              <div class="drop-zone-content">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="upload-cloud-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><polyline points="9 15 12 12 15 15"></polyline></svg>
+                <span class="drop-zone-text">Drag & drop your file here or <span>browse</span></span>
+                <span class="drop-zone-info">Supports .pdf and .docx only (Max 10MB)</span>
+              </div>
+              <input type="file" id="fileInput" name="file" accept=".pdf,.docx" required class="file-input-hidden">
+            </div>
+            <!-- File details preview -->
+            <div id="fileDetails" class="file-details hidden">
+              <span id="selectedFileName">filename.pdf</span>
+              <button type="button" id="removeFileBtn" class="btn-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Action Button -->
+          <button type="submit" id="submitBtn" class="btn btn-primary">
+            <span>Upload & Share</span>
+            <div class="spinner hidden" id="submitSpinner"></div>
+          </button>
+        </form>
+      </section>
+
+      <!-- Right Column: Files Board -->
+      <section class="files-section">
+        
+        <!-- Search and Sort Panel -->
+        <div class="filter-panel glass-panel">
+          <!-- Search -->
+          <div class="search-box">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="search-icon"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="searchInput" placeholder="Search by file name, uploader, or note...">
+          </div>
+          
+          <!-- Sort -->
+          <div class="sort-box">
+            <label for="sortSelect">Sort</label>
+            <div class="select-wrapper">
+              <select id="sortSelect">
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="alphabetical">File Name A-Z</option>
+              </select>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="select-chevron"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Files Display Feed -->
+        <div class="feed-header">
+          <h3>Shared Files</h3>
+          <span class="file-count" id="fileCount">0 Files</span>
+        </div>
+
+        <!-- Loading Feed State -->
+        <div id="feedLoading" class="feed-state-container hidden">
+          <div class="pulse-spinner"></div>
+          <p>Fetching shared assets...</p>
+        </div>
+
+        <!-- Cards Container -->
+        <div id="filesGrid" class="files-grid">
+          <!-- Dynamic upload cards will be injected here -->
+        </div>
+
+        <!-- Empty Feed State -->
+        <div id="emptyState" class="empty-state glass-panel hidden">
+          <div class="empty-state-icon">📂</div>
+          <h4>No shared files found</h4>
+          <p>Files uploaded by your friends will show up here. Use the form on the left to share the first one!</p>
+        </div>
+
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <p>&copy; 2026 ShareBox. Created for easy collaboration.</p>
+  </footer>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
