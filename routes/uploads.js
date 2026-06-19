@@ -2,26 +2,11 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 const Upload = require('../models/Upload');
+const cloudinary = require('../config/cloudinary');
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Multer Storage Configuration
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    // Generate unique name: timestamp-random-originalName
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
+// Multer Memory Storage Configuration
+const storage = multer.memoryStorage();
 
 // Multer File Filter - PDF & DOCX only
 const fileFilter = (req, file, cb) => {
@@ -41,7 +26,7 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// Initialize Multer
+// Initialize Multer with memory storage
 const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
@@ -50,10 +35,32 @@ const upload = multer({
   }
 });
 
+// Helper function to upload stream to Cloudinary
+const uploadToCloudinary = (buffer, originalName, mimeType) => {
+  return new Promise((resolve, reject) => {
+    const uploadOptions = {
+      resource_type: 'auto',
+      folder: 'sharebox-uploads',
+      public_id: `${Date.now()}-${path.parse(originalName).name}`,
+      overwrite: true
+    };
+
+    cloudinary.uploader.upload_stream(
+      uploadOptions,
+      (error, result) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(result);
+        }
+      }
+    ).end(buffer);
+  });
+};
+
 // @route   POST /api/uploads
-// @desc    Upload file and note
+// @desc    Upload file and note to Cloudinary
 router.post('/', (req, res) => {
-  // Use multer upload middleware
   const uploadSingle = upload.single('file');
 
   uploadSingle(req, res, async (err) => {
@@ -71,10 +78,6 @@ router.post('/', (req, res) => {
       const { uploader, note } = req.body;
 
       if (!uploader || uploader.trim() === '') {
-        // Clean up file if it was uploaded
-        if (req.file) {
-          fs.unlinkSync(req.file.path);
-        }
         return res.status(400).json({ error: 'Uploader name is required.' });
       }
 
@@ -82,28 +85,32 @@ router.post('/', (req, res) => {
         return res.status(400).json({ error: 'Please select a file to upload.' });
       }
 
+      // Upload to Cloudinary
+      const cloudinaryResult = await uploadToCloudinary(
+        req.file.buffer,
+        req.file.originalname,
+        req.file.mimetype
+      );
+
+      // Save metadata to MongoDB
       const newUpload = new Upload({
         uploader: uploader.trim(),
         originalName: req.file.originalname,
-        savedName: req.file.filename,
-        filePath: req.file.path,
         mimeType: req.file.mimetype,
-        note: note ? note.trim() : ''
+        note: note ? note.trim() : '',
+        cloudinaryUrl: cloudinaryResult.secure_url,
+        cloudinaryPublicId: cloudinaryResult.public_id
       });
 
       const savedUpload = await newUpload.save();
       res.status(201).json(savedUpload);
-    } catch (dbErr) {
-      // Clean up uploaded file if DB save fails
-      if (req.file) {
-        try {
-          fs.unlinkSync(req.file.path);
-        } catch (fsErr) {
-          console.error('Failed to delete file after DB error:', fsErr);
-        }
+    } catch (err) {
+      console.error('Upload error:', err);
+      if (err.message && err.message.includes('Cloudinary')) {
+        res.status(500).json({ error: 'Failed to upload file to cloud storage.' });
+      } else {
+        res.status(500).json({ error: 'Database saving error.' });
       }
-      console.error(dbErr);
-      res.status(500).json({ error: 'Database saving error.' });
     }
   });
 });
@@ -144,21 +151,16 @@ router.get('/', async (req, res) => {
 });
 
 // @route   GET /api/uploads/:id/download
-// @desc    Download file by ID
+// @desc    Download file by ID (redirect to Cloudinary)
 router.get('/:id/download', async (req, res) => {
   try {
-    const fileRecord = await Upload.findById(req.id || req.params.id);
+    const fileRecord = await Upload.findById(req.params.id);
     if (!fileRecord) {
       return res.status(404).json({ error: 'File not found.' });
     }
 
-    // Check if file exists on disk
-    if (!fs.existsSync(fileRecord.filePath)) {
-      return res.status(404).json({ error: 'File not found on server disk.' });
-    }
-
-    // Download file and specify its original filename to the browser
-    res.download(fileRecord.filePath, fileRecord.originalName);
+    // Redirect to Cloudinary URL
+    res.redirect(fileRecord.cloudinaryUrl);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error downloading file.' });
@@ -166,22 +168,22 @@ router.get('/:id/download', async (req, res) => {
 });
 
 // @route   DELETE /api/uploads/:id
-// @desc    Delete file and note by ID
+// @desc    Delete file from Cloudinary and MongoDB
 router.delete('/:id', async (req, res) => {
   try {
-    const fileRecord = await Upload.findById(req.id || req.params.id);
+    const fileRecord = await Upload.findById(req.params.id);
     if (!fileRecord) {
       return res.status(404).json({ error: 'File record not found.' });
     }
 
-    // Attempt to delete file from filesystem
+    // Delete from Cloudinary
     try {
-      if (fs.existsSync(fileRecord.filePath)) {
-        fs.unlinkSync(fileRecord.filePath);
-      }
-    } catch (fsErr) {
-      console.error(`Error deleting physical file at ${fileRecord.filePath}:`, fsErr);
-      // We still proceed to remove the metadata from the database
+      await cloudinary.uploader.destroy(fileRecord.cloudinaryPublicId, {
+        resource_type: 'auto'
+      });
+    } catch (cloudinaryErr) {
+      console.error('Cloudinary deletion error:', cloudinaryErr);
+      // Continue with database deletion even if Cloudinary deletion fails
     }
 
     // Delete record from Database

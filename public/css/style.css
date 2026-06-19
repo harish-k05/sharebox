@@ -45,11 +45,6 @@
 body {
   font-family: var(--font-family-body);
   background-color: var(--bg-color);
-  background-image: linear-gradient(rgba(255, 253, 250, 0.15), rgba(255, 253, 250, 0.15)), url('../images/background.jpg');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
   color: var(--text-primary);
   min-height: 100vh;
   position: relative;
@@ -58,6 +53,24 @@ body {
   -webkit-font-smoothing: antialiased;
   display: flex;
   flex-direction: column;
+}
+
+/* Fixed background using separate div for mobile compatibility */
+.fixed-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-image: linear-gradient(rgba(255, 253, 250, 0.15), rgba(255, 253, 250, 0.15)), url('../images/background.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: -2;
+  pointer-events: none;
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 /* ==========================================================================
@@ -148,6 +161,7 @@ body {
   font-size: 2.75rem;
   letter-spacing: -0.5px;
   background: linear-gradient(135deg, hsl(25, 80%, 45%) 0%, var(--text-primary) 100%);
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }

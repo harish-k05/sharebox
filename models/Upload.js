@@ -10,14 +10,6 @@ const uploadSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  savedName: {
-    type: String,
-    required: true
-  },
-  filePath: {
-    type: String,
-    required: true
-  },
   mimeType: {
     type: String,
     required: true
@@ -26,6 +18,15 @@ const uploadSchema = new mongoose.Schema({
     type: String,
     trim: true,
     default: ''
+  },
+  cloudinaryUrl: {
+    type: String,
+    required: true
+  },
+  cloudinaryPublicId: {
+    type: String,
+    required: true,
+    unique: true
   },
   uploadDate: {
     type: Date,

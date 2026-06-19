@@ -2,7 +2,6 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
-const fs = require('fs');
 
 const app = express();
 
@@ -12,13 +11,6 @@ app.use(express.urlencoded({ extended: true }));
 
 // Serve static frontend files from 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
-
-// Ensure uploads folder exists and serve it if needed (though downloads are handled via API route)
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-app.use('/uploads', express.static(uploadsDir));
 
 // Connect to MongoDB
 const dbUri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/sharebox';

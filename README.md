@@ -10,7 +10,8 @@ Designed with a premium **glassmorphic dark-mode interface**, it features smooth
 
 - **Backend:** Node.js, Express.js
 - **Database:** MongoDB Atlas (Mongoose ORM)
-- **File Upload Middleware:** Multer
+- **File Storage:** Cloudinary (Cloud-based file storage)
+- **File Upload Middleware:** Multer (Memory storage)
 - **Frontend:** Vanilla HTML5 (Semantic elements), CSS3 (Custom properties, HSL colors, Backdrop-filters), JavaScript (ES6+, Fetch API, Event loops, Debouncing)
 
 ---
@@ -19,6 +20,8 @@ Designed with a premium **glassmorphic dark-mode interface**, it features smooth
 
 ```text
 sharebox/
+├── config/
+│   └── cloudinary.js     # Cloudinary SDK configuration
 ├── models/
 │   └── Upload.js         # Mongoose schema for document metadata
 ├── public/
@@ -28,9 +31,9 @@ sharebox/
 │   │   └── app.js        # Form validation, upload handlers, and view refreshes
 │   └── index.html        # Responsive frontend board layout
 ├── routes/
-│   └── uploads.js        # Express routing for file processing & file system sync
-├── uploads/              # Local storage folder for uploaded documents
-├── .env                  # Port & database connections configuration
+│   └── uploads.js        # Express routing for Cloudinary upload/download/delete
+├── .env.example          # Environment variables template
+├── .env                  # Port, database, and Cloudinary configuration
 ├── package.json          # Node dependencies and script commands
 ├── server.js             # Server initialization and MongoDB config
 └── README.md             # Project documentation
@@ -44,6 +47,7 @@ Make sure you have the following installed on your machine:
 - **Node.js** (v18.0.0 or higher recommended)
 - **npm** (comes packaged with Node.js)
 - A **MongoDB database** (either running locally or a MongoDB Atlas cluster)
+- A **Cloudinary account** (free tier available at cloudinary.com)
 
 ---
 
@@ -64,19 +68,30 @@ This installs:
 * `express` (routing engine)
 * `mongoose` (database modeler)
 * `multer` (multipart/form-data upload agent)
+* `cloudinary` (cloud storage SDK)
 * `dotenv` (environment configuration reader)
 * `nodemon` (development environment auto-reloader)
 
-### 3. Database & Port Configuration
-A template file `.env` has been created in the root folder. Open `.env` and configure your settings:
+### 3. Environment Configuration
+Copy the `.env.example` file to create your `.env` file:
+```bash
+cp .env.example .env
+```
+
+Open `.env` and configure your settings:
 
 ```env
 PORT=5000
 MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.example.mongodb.net/sharebox?retryWrites=true&w=majority
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
 ```
 
-> **Note:** If you want to run it on a local MongoDB installation instead of Atlas, use:  
+> **MongoDB:** If you want to run it on a local MongoDB installation instead of Atlas, use:  
 > `MONGODB_URI=mongodb://127.0.0.1:27017/sharebox`
+>
+> **Cloudinary:** Get your credentials from the Cloudinary Dashboard at cloudinary.com/console
 
 ---
 
@@ -105,9 +120,9 @@ http://localhost:5000
 
 1. **Uploader Identity:** Users enter their name so friends know who shared the file.
 2. **Strict File Filtering:** Only `.pdf` and `.docx` files are accepted (handled both client-side and server-side).
-3. **File Size Protection:** Uploads are limited to `10 MB` to prevent disk overflow.
+3. **File Size Protection:** Uploads are limited to `10 MB` to prevent server overload.
 4. **File Type Badges:** Color-coded badges (`📕 PDF` and `📘 DOCX`) make scanning documents simple.
-5. **Database & File Synchronization:** Deleting a share removes the database record and deletes the physical file from the server disk.
+5. **Cloud Storage:** All files are stored in Cloudinary, ensuring no data loss on server restart or redeployment.
 6. **Smart API Refresh:** No periodic API polling. The frontend fetches the list of files when:
    - The page first loads.
    - An upload completes.
@@ -115,3 +130,16 @@ http://localhost:5000
    - A search term changes (with 300ms debouncing to optimize API performance).
    - The sort selection changes.
 7. **Sorting Controls:** Sort items dynamically by *Newest First*, *Oldest First*, or *File Name A-Z*.
+8. **Deployment Ready:** Works seamlessly on Railway, Render, VPS hosting, and other cloud platforms.
+
+---
+
+## Deployment
+
+This application is deployment-ready for:
+
+- **Railway:** Connect your GitHub repository and add environment variables
+- **Render:** Deploy as a web service with environment variables
+- **VPS:** Deploy using PM2 or similar process managers
+
+Since all files are stored in Cloudinary, no uploaded data will be lost during deployments or server restarts.
