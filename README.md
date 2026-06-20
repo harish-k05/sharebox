@@ -10,7 +10,7 @@ Designed with a premium **glassmorphic dark-mode interface**, it features smooth
 
 - **Backend:** Node.js, Express.js
 - **Database:** MongoDB Atlas (Mongoose ORM)
-- **File Storage:** Cloudinary (Cloud-based file storage)
+- **File Storage:** Supabase Storage (Cloud-based file storage)
 - **File Upload Middleware:** Multer (Memory storage)
 - **Frontend:** Vanilla HTML5 (Semantic elements), CSS3 (Custom properties, HSL colors, Backdrop-filters), JavaScript (ES6+, Fetch API, Event loops, Debouncing)
 
@@ -21,7 +21,7 @@ Designed with a premium **glassmorphic dark-mode interface**, it features smooth
 ```text
 sharebox/
 ├── config/
-│   └── cloudinary.js     # Cloudinary SDK configuration
+│   └── supabase.js       # Supabase client configuration
 ├── models/
 │   └── Upload.js         # Mongoose schema for document metadata
 ├── public/
@@ -31,9 +31,9 @@ sharebox/
 │   │   └── app.js        # Form validation, upload handlers, and view refreshes
 │   └── index.html        # Responsive frontend board layout
 ├── routes/
-│   └── uploads.js        # Express routing for Cloudinary upload/download/delete
+│   └── uploads.js        # Express routing for Supabase upload/download/delete
 ├── .env.example          # Environment variables template
-├── .env                  # Port, database, and Cloudinary configuration
+├── .env                  # Port, database, and Supabase configuration
 ├── package.json          # Node dependencies and script commands
 ├── server.js             # Server initialization and MongoDB config
 └── README.md             # Project documentation
@@ -47,7 +47,7 @@ Make sure you have the following installed on your machine:
 - **Node.js** (v18.0.0 or higher recommended)
 - **npm** (comes packaged with Node.js)
 - A **MongoDB database** (either running locally or a MongoDB Atlas cluster)
-- A **Cloudinary account** (free tier available at cloudinary.com)
+- A **Supabase account** (free tier available at supabase.com)
 
 ---
 
@@ -68,7 +68,7 @@ This installs:
 * `express` (routing engine)
 * `mongoose` (database modeler)
 * `multer` (multipart/form-data upload agent)
-* `cloudinary` (cloud storage SDK)
+* `@supabase/supabase-js` (Supabase client SDK)
 * `dotenv` (environment configuration reader)
 * `nodemon` (development environment auto-reloader)
 
@@ -83,15 +83,15 @@ Open `.env` and configure your settings:
 ```env
 PORT=5000
 MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.example.mongodb.net/sharebox?retryWrites=true&w=majority
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_BUCKET=sharebox-files
 ```
 
 > **MongoDB:** If you want to run it on a local MongoDB installation instead of Atlas, use:  
 > `MONGODB_URI=mongodb://127.0.0.1:27017/sharebox`
 >
-> **Cloudinary:** Get your credentials from the Cloudinary Dashboard at cloudinary.com/console
+> **Supabase:** Get your credentials from the Supabase Dashboard at supabase.com/dashboard
 
 ---
 
@@ -122,7 +122,7 @@ http://localhost:5000
 2. **Strict File Filtering:** Only `.pdf` and `.docx` files are accepted (handled both client-side and server-side).
 3. **File Size Protection:** Uploads are limited to `10 MB` to prevent server overload.
 4. **File Type Badges:** Color-coded badges (`📕 PDF` and `📘 DOCX`) make scanning documents simple.
-5. **Cloud Storage:** All files are stored in Cloudinary, ensuring no data loss on server restart or redeployment.
+5. **Cloud Storage:** All files are stored in Supabase Storage, ensuring no data loss on server restart or redeployment.
 6. **Smart API Refresh:** No periodic API polling. The frontend fetches the list of files when:
    - The page first loads.
    - An upload completes.
@@ -142,4 +142,4 @@ This application is deployment-ready for:
 - **Render:** Deploy as a web service with environment variables
 - **VPS:** Deploy using PM2 or similar process managers
 
-Since all files are stored in Cloudinary, no uploaded data will be lost during deployments or server restarts.
+Since all files are stored in Supabase Storage, no uploaded data will be lost during deployments or server restarts.

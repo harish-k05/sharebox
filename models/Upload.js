@@ -19,11 +19,11 @@ const uploadSchema = new mongoose.Schema({
     trim: true,
     default: ''
   },
-  cloudinaryUrl: {
+  fileUrl: {
     type: String,
     required: true
   },
-  cloudinaryPublicId: {
+  storagePath: {
     type: String,
     required: true,
     unique: true

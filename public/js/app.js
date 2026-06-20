@@ -223,7 +223,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Bind Actions
       card.querySelector('.btn-download').addEventListener('click', () => {
-        window.location.href = `/api/uploads/${item._id}/download`;
+        const downloadUrl = `/api/uploads/${item._id}/download`;
+        if (isPdf) {
+          // Open PDF in new tab
+          window.open(downloadUrl, '_blank');
+        } else {
+          // Download DOCX in current tab
+          window.location.href = downloadUrl;
+        }
       });
 
       card.querySelector('.btn-delete').addEventListener('click', async () => {

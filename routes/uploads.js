@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const Upload = require('../models/Upload');
-const cloudinary = require('../config/cloudinary');
+const supabase = require('../config/supabase');
 
 // Multer Memory Storage Configuration
 const storage = multer.memoryStorage();
@@ -35,31 +35,46 @@ const upload = multer({
   }
 });
 
-// Helper function to upload stream to Cloudinary
-const uploadToCloudinary = (buffer, originalName, mimeType) => {
-  return new Promise((resolve, reject) => {
-    const uploadOptions = {
-      resource_type: 'auto',
-      folder: 'sharebox-uploads',
-      public_id: `${Date.now()}-${path.parse(originalName).name}`,
-      overwrite: true
-    };
+// Helper function to upload to Supabase Storage
+const uploadToSupabase = (buffer, originalName, mimeType) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const fileName = path.parse(originalName).name;
+      const fileExt = path.extname(originalName);
+      const uniqueFileName = `${Date.now()}-${fileName}${fileExt}`;
+      const bucketName = process.env.SUPABASE_BUCKET || 'sharebox-files';
+      const storagePath = `${uniqueFileName}`;
 
-    cloudinary.uploader.upload_stream(
-      uploadOptions,
-      (error, result) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve(result);
-        }
+      // Upload file to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from(bucketName)
+        .upload(storagePath, buffer, {
+          contentType: mimeType,
+          upsert: false
+        });
+
+      if (error) {
+        reject(error);
+        return;
       }
-    ).end(buffer);
+
+      // Get public URL for the uploaded file
+      const { data: { publicUrl } } = supabase.storage
+        .from(bucketName)
+        .getPublicUrl(storagePath);
+
+      resolve({
+        fileUrl: publicUrl,
+        storagePath: storagePath
+      });
+    } catch (err) {
+      reject(err);
+    }
   });
 };
 
 // @route   POST /api/uploads
-// @desc    Upload file and note to Cloudinary
+// @desc    Upload file and note to Supabase Storage
 router.post('/', (req, res) => {
   const uploadSingle = upload.single('file');
 
@@ -85,28 +100,35 @@ router.post('/', (req, res) => {
         return res.status(400).json({ error: 'Please select a file to upload.' });
       }
 
-      // Upload to Cloudinary
-      const cloudinaryResult = await uploadToCloudinary(
+      // Upload to Supabase Storage
+      const supabaseResult = await uploadToSupabase(
         req.file.buffer,
         req.file.originalname,
         req.file.mimetype
       );
 
+      // Log the result for debugging
+      console.log('Supabase upload result:', {
+        fileUrl: supabaseResult.fileUrl,
+        storagePath: supabaseResult.storagePath
+      });
+
+   
       // Save metadata to MongoDB
       const newUpload = new Upload({
         uploader: uploader.trim(),
         originalName: req.file.originalname,
         mimeType: req.file.mimetype,
         note: note ? note.trim() : '',
-        cloudinaryUrl: cloudinaryResult.secure_url,
-        cloudinaryPublicId: cloudinaryResult.public_id
+        fileUrl: supabaseResult.fileUrl,
+        storagePath: supabaseResult.storagePath
       });
 
       const savedUpload = await newUpload.save();
       res.status(201).json(savedUpload);
     } catch (err) {
       console.error('Upload error:', err);
-      if (err.message && err.message.includes('Cloudinary')) {
+      if (err.message && err.message.includes('Supabase')) {
         res.status(500).json({ error: 'Failed to upload file to cloud storage.' });
       } else {
         res.status(500).json({ error: 'Database saving error.' });
@@ -151,7 +173,7 @@ router.get('/', async (req, res) => {
 });
 
 // @route   GET /api/uploads/:id/download
-// @desc    Download file by ID (redirect to Cloudinary)
+// @desc    Download file by ID (redirect to Supabase file URL)
 router.get('/:id/download', async (req, res) => {
   try {
     const fileRecord = await Upload.findById(req.params.id);
@@ -159,8 +181,8 @@ router.get('/:id/download', async (req, res) => {
       return res.status(404).json({ error: 'File not found.' });
     }
 
-    // Redirect to Cloudinary URL
-    res.redirect(fileRecord.cloudinaryUrl);
+    // Redirect to the stored Supabase file URL
+    res.redirect(fileRecord.fileUrl);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error downloading file.' });
@@ -168,7 +190,7 @@ router.get('/:id/download', async (req, res) => {
 });
 
 // @route   DELETE /api/uploads/:id
-// @desc    Delete file from Cloudinary and MongoDB
+// @desc    Delete file from Supabase Storage and MongoDB
 router.delete('/:id', async (req, res) => {
   try {
     const fileRecord = await Upload.findById(req.params.id);
@@ -176,17 +198,37 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ error: 'File record not found.' });
     }
 
-    // Delete from Cloudinary
-    try {
-      await cloudinary.uploader.destroy(fileRecord.cloudinaryPublicId, {
-        resource_type: 'auto'
+    // Validate that storagePath exists
+    if (!fileRecord.storagePath) {
+      console.error('Missing storagePath for file:', fileRecord._id);
+      return res.status(400).json({
+        error: 'Legacy file record missing storage path. Cannot delete from cloud storage. Please contact administrator for manual cleanup.'
       });
-    } catch (cloudinaryErr) {
-      console.error('Cloudinary deletion error:', cloudinaryErr);
-      // Continue with database deletion even if Cloudinary deletion fails
     }
 
-    // Delete record from Database
+    const bucketName = process.env.SUPABASE_BUCKET || 'sharebox-files';
+
+    // Delete from Supabase Storage first
+    try {
+      const { error } = await supabase.storage
+        .from(bucketName)
+        .remove([fileRecord.storagePath]);
+
+      if (error) {
+        console.error('Supabase deletion error:', error);
+        return res.status(500).json({
+          error: 'Failed to delete file from cloud storage. Please try again.'
+        });
+      }
+    } catch (supabaseErr) {
+      console.error('Supabase deletion error:', supabaseErr);
+      // Do not delete from MongoDB if Supabase deletion fails
+      return res.status(500).json({
+        error: 'Failed to delete file from cloud storage. Please try again.'
+      });
+    }
+
+    // Only delete from MongoDB after successful Supabase deletion
     await Upload.findByIdAndDelete(fileRecord._id);
 
     res.json({ message: 'File and note deleted successfully.' });
