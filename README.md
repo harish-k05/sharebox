@@ -44,7 +44,7 @@ sharebox/
 ## Prerequisites
 
 Make sure you have the following installed on your machine:
-- **Node.js** (v18.0.0 or higher recommended)
+- **Node.js** (v20.0.0 or higher recommended)
 - **npm** (comes packaged with Node.js)
 - A **MongoDB database** (either running locally or a MongoDB Atlas cluster)
 - A **Supabase account** (free tier available at supabase.com)
@@ -84,7 +84,7 @@ Open `.env` and configure your settings:
 PORT=5000
 MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.example.mongodb.net/sharebox?retryWrites=true&w=majority
 SUPABASE_URL=your_supabase_project_url
-SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 SUPABASE_BUCKET=sharebox-files
 ```
 
